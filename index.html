@@ -165,8 +165,8 @@
       <aside class="rail">
         <section class="assistant-card">
           <div class="assistant-head">
-            <h2>مساعد تبيان</h2>
-            <p>يقرأ الأسئلة بصوت عربي</p>
+            <h2 id="home-who">مساعد تبيان</h2>
+            <p id="home-role">يقرأ الأسئلة بصوت عربي</p>
             <span class="speaker" aria-hidden="true">🔊</span>
           </div>
           <div class="assistant-actions">
@@ -174,9 +174,10 @@
             <button type="button" class="btn btn-ghost" id="btn-stop">إيقاف الصوت</button>
           </div>
           <p class="note">إذا كنت أصم أو ضعيف سمع، يتوقف الصوت تلقائيًا.</p>
+          <p class="voice-status" id="voice-status" aria-live="polite"></p>
         </section>
         <section class="sign-card">
-          <h2>فيديو لغة الإشارة</h2>
+          <h2 id="stage-title">شخصية الترحيب</h2>
           <div class="stage" id="welcome-stage" data-variant="bayan">
             <div class="stage-slot"></div>
             <div class="wave" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -261,6 +262,7 @@
             <button type="button" class="btn btn-solid" id="lesson-listen">استمع</button>
             <button type="button" class="btn btn-ghost" id="lesson-stop">إيقاف الصوت</button>
           </div>
+          <p class="voice-status" id="lesson-voice-status" aria-live="polite"></p>
         </section>
         <section class="sign-card">
           <h2>فيديو لغة الإشارة</h2>

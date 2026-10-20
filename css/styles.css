@@ -207,6 +207,10 @@ legend { font-weight: 700; padding: 0 6px; }
 .speaker { position: absolute; left: 14px; top: 14px; font-size: 1.4rem; }
 .assistant-actions { display: flex; gap: 8px; margin: 12px 0; }
 .note { font-size: 0.9rem; }
+.voice-status { min-height: 1.4em; color: var(--brand-dark); font-weight: 700; }
+.stage[data-variant="boy"] .avatar,
+.stage[data-variant="girl"] .avatar { width: min(100%, 250px); }
+.avatar.speaking .halo { animation: pulse 0.7s ease-in-out infinite; }
 .sign-card h2, .caption-card h2 { margin-bottom: 8px; }
 .stage { text-align: center; }
 .stage-slot .avatar { width: min(100%, 210px); height: auto; }
@@ -317,6 +321,7 @@ body[data-hearing="deaf"] .wave, body[data-hearing="hoh"] .wave { display: none 
 body[data-theme="deaf"] .lead, body[data-theme="deaf-child"] .lead { font-size: 1.4rem; }
 body[data-theme="child"] .pick, body[data-theme="deaf-child"] .lesson strong { font-size: 1.05rem; }
 
+@keyframes pulse { 50% { opacity: 0.35; } }
 @keyframes bob { 50% { transform: translateY(-8px); } }
 @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.08); } }
 @keyframes wave { 0%, 100% { transform: rotate(-108deg); } 50% { transform: rotate(-152deg); } }

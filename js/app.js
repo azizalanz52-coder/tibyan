@@ -9,7 +9,18 @@
   ];
   const POSES = ["idle", "hello", "place", "all", "you", "explain"];
   const HEARING_LABEL = { hearing: "أسمع", hoh: "ضعيف سمع", deaf: "أصم" };
-  const state = { profile: null, seq: 0, voiceTimer: 0, lastSpeak: "" };
+  const state = {
+    profile: null,
+    seq: 0,
+    voiceTimer: 0,
+    voiceSeq: 0,
+    keepAlive: 0,
+    utterance: null,
+    announced: "",
+    welcomePlaying: false,
+    ready: false,
+    lastSpeak: ""
+  };
   const VIDEO_KEY = "tibyan.videos.v1";
 
   function readSavedVideos() {
@@ -142,37 +153,111 @@
     return hearing !== "deaf" && hearing !== "hoh";
   }
 
-  function pickVoice() {
+  function arabicVoice() {
     if (!window.speechSynthesis) return null;
     const voices = speechSynthesis.getVoices();
-    return voices.find(function (voice) { return /ar-SA/i.test(voice.lang); })
+    return voices.find(function (voice) { return /ar[-_]SA/i.test(voice.lang); })
       || voices.find(function (voice) { return /^ar/i.test(voice.lang); })
+      || voices.find(function (voice) { return /arabic|عربي/i.test(voice.name); })
       || null;
   }
 
+  function activeProfile() {
+    if (state.profile) return state.profile;
+    const raw = readForm();
+    if (!raw.ageFrom) return null;
+    return {
+      ageFrom: Number(raw.ageFrom),
+      ageTo: Number(raw.ageTo || raw.ageFrom),
+      gender: raw.gender,
+      hearing: raw.hearing
+    };
+  }
+
+  function voiceTune() {
+    const profile = activeProfile();
+    const child = profile && engine.readingLevel(profile) === "child";
+    const girl = profile && profile.gender === "female";
+    if (child && girl) return { rate: 0.9, pitch: 1.35 };
+    if (child) return { rate: 0.9, pitch: 1.18 };
+    return { rate: 0.96, pitch: 0.94 };
+  }
+
+  function setVoiceStatus(text) {
+    ["voice-status", "lesson-voice-status"].forEach(function (id) {
+      const node = document.getElementById(id);
+      if (node) node.textContent = text || "";
+    });
+  }
+
   function speak(text) {
-    if (!soundAllowed() || !window.speechSynthesis || !text) return;
+    if (!text || !window.speechSynthesis) return;
+    if (!soundAllowed()) {
+      stopVoice();
+      return;
+    }
+    const synth = speechSynthesis;
+    const token = ++state.voiceSeq;
+    const run = function () {
+      if (token !== state.voiceSeq) return;
+      window.clearInterval(state.keepAlive);
+      const utterance = new SpeechSynthesisUtterance(text);
+      const tune = voiceTune();
+      const voice = arabicVoice();
+      utterance.lang = "ar-SA";
+      utterance.rate = tune.rate;
+      utterance.pitch = tune.pitch;
+      if (voice) utterance.voice = voice;
+      state.utterance = utterance;
+      state.lastSpeak = text;
+      utterance.onstart = function () {
+        setSpeaking(true);
+        setVoiceStatus(voice ? "يتكلم الآن" : "يتكلم الآن. إذا النطق مو عربي: إعدادات ويندوز، الوقت واللغة، العربية، ثم تحميل الكلام.");
+      };
+      utterance.onend = function () {
+        setSpeaking(false);
+        setVoiceStatus("");
+        window.clearInterval(state.keepAlive);
+        if (!state.welcomePlaying) setPose("idle");
+      };
+      utterance.onerror = function (event) {
+        if (event.error === "canceled" || event.error === "interrupted") return;
+        setSpeaking(false);
+        window.clearInterval(state.keepAlive);
+        setVoiceStatus("الصوت توقف. اضغط استمع مرة أخرى.");
+      };
+      synth.resume();
+      synth.speak(utterance);
+      state.keepAlive = window.setInterval(function () {
+        if (!synth.speaking) {
+          window.clearInterval(state.keepAlive);
+          return;
+        }
+        synth.pause();
+        synth.resume();
+      }, 8000);
+    };
     window.clearTimeout(state.voiceTimer);
-    state.lastSpeak = text;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "ar-SA";
-    utterance.rate = 0.95;
-    const voice = pickVoice();
-    if (voice) utterance.voice = voice;
-    utterance.onend = function () { setSpeaking(false); };
-    utterance.onerror = function () { setSpeaking(false); };
-    speechSynthesis.cancel();
-    setSpeaking(true);
-    state.voiceTimer = window.setTimeout(function () {
-      if (speechSynthesis.paused) speechSynthesis.resume();
-      speechSynthesis.speak(utterance);
-    }, 80);
+    synth.cancel();
+    if (!synth.getVoices().length) {
+      const once = function () {
+        synth.removeEventListener("voiceschanged", once);
+        run();
+      };
+      synth.addEventListener("voiceschanged", once);
+      synth.getVoices();
+    }
+    state.voiceTimer = window.setTimeout(run, 70);
   }
 
   function stopVoice() {
+    state.voiceSeq += 1;
     window.clearTimeout(state.voiceTimer);
+    window.clearInterval(state.keepAlive);
     if (window.speechSynthesis) speechSynthesis.cancel();
+    state.utterance = null;
     setSpeaking(false);
+    setVoiceStatus("");
   }
 
   function setCaptions(text) {
@@ -190,11 +275,13 @@
 
   function playWelcome(withVoice) {
     const token = ++state.seq;
+    state.welcomePlaying = true;
     if (withVoice) speak(WELCOME_LINE);
     let i = 0;
     function run() {
       if (token !== state.seq) return;
       if (i >= STEPS.length) {
+        state.welcomePlaying = false;
         setPose("idle");
         setCaptions(WELCOME_LINE);
         highlightGloss(-1);
@@ -260,14 +347,19 @@
       });
     }
     const hello = document.getElementById("hello-line");
-    if (raw.ageFrom && raw.gender && raw.hearing) {
-      const who = engine.persona({
-        ageFrom: Number(raw.ageFrom),
-        ageTo: Number(raw.ageTo),
-        gender: raw.gender,
-        hearing: raw.hearing
-      });
+    const who = previewPersona(raw);
+    showHomeCharacter(who);
+    if (raw.ageFrom && raw.gender && raw.hearing && who) {
       hello.textContent = "أهلاً بك في تبيان. تم تجهيز المحتوى المناسب لك مع " + who.name + "، " + who.role + ".";
+      const key = who.variant + ":" + raw.hearing;
+      if (state.ready && raw.hearing === "hearing" && state.announced !== key) {
+        state.announced = key;
+        state.seq += 1;
+        state.welcomePlaying = false;
+        setCaptions(greetLine(who));
+        setPose("hello");
+        speak(greetLine(who));
+      }
     } else {
       hello.textContent = "أهلاً بك في تبيان. كمّل اختياراتك حتى نجهّز المحتوى المناسب لك.";
     }
@@ -352,7 +444,6 @@
     thread.appendChild(intro);
     setCaptions(engine.introFor(profile));
     setPose("hello");
-    window.setTimeout(function () { setPose("idle"); }, 1400);
     if (soundAllowed()) speak(engine.introFor(profile));
   }
 
@@ -435,10 +526,48 @@
     return article;
   }
 
+  function previewPersona(raw) {
+    if (!raw.ageFrom) return null;
+    const level = engine.readingLevel({ ageFrom: Number(raw.ageFrom), ageTo: Number(raw.ageTo || raw.ageFrom) });
+    if (level === "child" && !raw.gender) return null;
+    return engine.persona({
+      ageFrom: Number(raw.ageFrom),
+      ageTo: Number(raw.ageTo || raw.ageFrom),
+      gender: raw.gender || "male",
+      hearing: raw.hearing || "hearing"
+    });
+  }
+
+  function greetLine(who) {
+    if (who.variant === "girl") return "هلا، أنا ليان. شخصية كرتونية، وأحكي معك بكلام بسيط.";
+    if (who.variant === "boy") return "هلا، أنا سامي. شخصية كرتونية، وأحكي معك بكلام بسيط.";
+    return "أنا مساعد تبيان. مساعدك الرقمي، اكتب سؤالك وأقرأه لك.";
+  }
+
+  function showHomeCharacter(who) {
+    const stage = document.getElementById("welcome-stage");
+    const title = document.getElementById("home-who");
+    const role = document.getElementById("home-role");
+    const stageTitle = document.getElementById("stage-title");
+    if (!who) {
+      stage.dataset.variant = "bayan";
+      title.textContent = "مساعد تبيان";
+      role.textContent = "يقرأ الأسئلة بصوت عربي";
+      stageTitle.textContent = "شخصية الترحيب";
+      return;
+    }
+    const child = who.variant === "boy" || who.variant === "girl";
+    stage.dataset.variant = who.variant;
+    title.textContent = who.name;
+    role.textContent = child ? "شخصية كرتونية تتكلم مع الطفل" : "مساعد رقمي يقرأ الجواب بصوت";
+    stageTitle.textContent = child ? "الشخصية الكرتونية" : "المساعد الرقمي";
+  }
+
   function showOnCharacter(card, withVoice) {
-    setCaptions(card.lead);
+    state.welcomePlaying = false;
+    setCaptions(card.speak || card.lead);
     setPose("explain");
-    if (withVoice) speak(card.speak);
+    if (withVoice) speak(card.speak || card.lead);
     else stopVoice();
   }
 
@@ -550,7 +679,17 @@
     enterApp(raw);
   });
 
-  document.getElementById("btn-listen").addEventListener("click", function () { playWelcome(true); });
+  document.getElementById("btn-listen").addEventListener("click", function () {
+    const who = previewPersona(readForm());
+    if (who && soundAllowed()) {
+      state.welcomePlaying = false;
+      setCaptions(greetLine(who));
+      setPose("hello");
+      speak(greetLine(who));
+      return;
+    }
+    playWelcome(true);
+  });
   document.getElementById("btn-stop").addEventListener("click", stopVoice);
   document.getElementById("lesson-listen").addEventListener("click", function () {
     speak(document.getElementById("lesson-caption").textContent || WELCOME_LINE);
@@ -624,7 +763,10 @@
     }
   });
 
-  if (window.speechSynthesis) speechSynthesis.onvoiceschanged = pickVoice;
+  if (window.speechSynthesis) {
+    speechSynthesis.getVoices();
+    speechSynthesis.addEventListener("voiceschanged", function () { speechSynthesis.getVoices(); });
+  }
   cloneCharacters();
   try {
     const saved = JSON.parse(localStorage.getItem("tibyan.profile.v1") || "null");
@@ -639,6 +781,7 @@
     }
   } catch (err) { /* تجاهل */ }
   updateSummary();
+  state.ready = true;
   paintLessons();
   showHome();
   playWelcome(false);

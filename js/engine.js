@@ -763,8 +763,7 @@
   function getMode(profile) {
     const level = readingLevel(profile);
     const deaf = profile.hearing === "deaf" || profile.hearing === "hoh";
-    if (deaf && level === "child") return "deaf-child";
-    if (deaf) return "deaf";
+    if (level === "child" && deaf) return "deaf-child";
     if (level === "child") return "child";
     return "assistant";
   }
@@ -776,19 +775,16 @@
         return {
           name: "ليان",
           variant: "girl",
-          role: mode === "deaf-child" ? "شخصية كرتون، والكلام مكتوب مع الحركة" : "شخصية كرتونية للبنات"
+          role: "شخصية كرتونية للأطفال"
         };
       }
       return {
         name: "سامي",
         variant: "boy",
-        role: mode === "deaf-child" ? "شخصية كرتون، والكلام مكتوب مع الحركة" : "شخصية كرتونية للأولاد"
+        role: "شخصية كرتونية للأطفال"
       };
     }
-    if (mode === "deaf") {
-      return { name: "بيان", variant: "bayan", role: "شخصية لغة الإشارة" };
-    }
-    return { name: "مساعد تبيان", variant: "assistant", role: "يبسّط الخطر إلى خطوات وقاية" };
+    return { name: "مساعد تبيان", variant: "assistant", role: "مساعد رقمي ذكي" };
   }
 
   function scoreTopics(text) {
@@ -889,16 +885,13 @@
   function introFor(profile) {
     const who = persona(profile);
     const mode = getMode(profile);
-    if (mode === "deaf") {
-      return "أنا بيان. أشوفك، وأوضح لك بالحركة والكلام المكتوب. اكتب أي موقف يضايقك.";
-    }
     if (mode === "deaf-child") {
       return "هلا، أنا " + who.name + ". الكلام مكتوب قدامك. إذا شيء خوّفك، اكتبه.";
     }
     if (mode === "child") {
       return "هلا، أنا " + who.name + ". إذا أحد ضايقك أو قال كلام يخوف، احكِ لي بكلامك.";
     }
-    return "أنا مساعد تبيان. اكتب الموقف أو الفكرة المقلقة، وأحوّلها إلى معرفة مبسطة وخطوات وقاية.";
+    return "أنا مساعد تبيان، مساعدك الرقمي. اكتب الموقف، وأقرأه لك ثم أحوّله إلى خطوات وقاية.";
   }
 
   function pathLabel(profile) {
@@ -916,9 +909,8 @@
     const mode = getMode(profile);
     const who = persona(profile);
     if (mode === "deaf-child") return "مسارك: " + who.name + "، شخصية كرتون تشرح بالحركة، والكلام مكتوب بخط كبير.";
-    if (mode === "deaf") return "مسارك: بيان، شخصية الإشارة. النص ظاهر دائمًا" + (profile.hearing === "hoh" ? "، والصوت عند الحاجة." : ".");
-    if (mode === "child") return "مسارك: " + who.name + "، شخصية كرتونية بكلام بسيط جدًا.";
-    return "مسارك: مساعد تبيان. يحوّل الفكرة المقلقة إلى وقاية مبسطة.";
+    if (mode === "child") return "مسارك: " + who.name + "، شخصية كرتونية بكلام بسيط، وتكلمك بصوت.";
+    return "مسارك: مساعد تبيان الرقمي. يقرأ الجواب بصوت ويحوّله إلى وقاية مبسطة.";
   }
 
   window.MakanakEngine = {
