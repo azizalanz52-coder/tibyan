@@ -40,14 +40,15 @@ img { max-width: 100%; display: block; }
   background: #fff;
   border-bottom: 1px solid var(--line);
 }
+.uni { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .uni img { height: 68px; width: auto; }
+.tibyan-mark { height: 78px; }
 .nav { display: flex; gap: 6px; flex: 1; justify-content: center; flex-wrap: wrap; }
 .nav a {
   color: var(--ink); text-decoration: none; font-weight: 600;
   padding: 8px 10px; border-bottom: 3px solid transparent;
 }
 .nav a.is-on { color: var(--brand); border-bottom-color: var(--brand); }
-.tibyan-lockup { display: flex; align-items: center; gap: 8px; color: var(--brand); font-size: 1.45rem; }
 .login-btn {
   display: inline-flex; align-items: center; gap: 8px;
   background: var(--brand); color: #fff; border: 0; border-radius: 999px;
@@ -217,6 +218,11 @@ legend { font-weight: 700; padding: 0 6px; }
 .micro { font-size: 0.82rem; }
 
 .info { width: min(1240px, calc(100% - 28px)); margin: 12px auto; padding: 18px 22px; }
+.about-grid { display: grid; grid-template-columns: minmax(200px, 280px) 1fr; gap: 18px; align-items: center; margin-top: 8px; }
+.about-grid img { width: 100%; height: auto; }
+.about h3 { color: var(--brand); margin: 10px 0 4px; font-size: 1.2rem; }
+.mark-list { margin: 0; padding: 0 1.15em 0 0; color: var(--ink); }
+.mark-list li { margin: 6px 0; }
 .info details { border-top: 1px solid var(--line); padding: 8px 0; }
 .info summary { cursor: pointer; font-weight: 700; }
 .trust {
@@ -321,7 +327,7 @@ body[data-theme="child"] .pick, body[data-theme="deaf-child"] .lesson strong { f
 @media (max-width: 1100px) {
   .site-header { flex-wrap: wrap; }
   .nav { order: 4; flex-basis: 100%; justify-content: flex-start; }
-  .layout, .hero, .wizard-grid, .after, .lesson-row, .transform, .clip-row { grid-template-columns: 1fr; }
+  .layout, .hero, .wizard-grid, .after, .lesson-row, .transform, .clip-row, .about-grid { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
